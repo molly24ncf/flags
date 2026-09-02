@@ -1,0 +1,62 @@
+---
+title: "World Flags"
+format: html
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(countrycode)
+
+# List all flag image files in the data directory
+flag_files <- list.files("data", pattern = "\\.png$")
+flag_codes <- sub("\\.png$", "", flag_files)
+
+# Map ISO codes to country names
+flags_df <- tibble(
+  code = flag_codes,
+  country = countrycode(
+    toupper(code),
+    origin = "iso2c",
+    destination = "country.name",
+    custom_match = c(
+      "GB-ENG" = "England",
+      "GB-NIR" = "Northern Ireland",
+      "GB-SCT" = "Scotland",
+      "GB-WLS" = "Wales",
+      "XK" = "Kosovo"
+    )
+  ),
+  file = paste0("data/", flag_files)
+) |>
+  drop_na(country) |>
+  arrange(country)
+
+# Pass data to Observable JS
+ojs_define(flags_data = flags_df)
+```
+
+```{ojs}
+//| echo: false
+flags = transpose(flags_data)
+
+viewof selected = Inputs.select(
+  flags,
+  {
+    label: "Select a country:",
+    format: d => d.country,
+    value: flags.find(d => d.country === "United States")
+  }
+)
+```
+
+```{ojs}
+//| echo: false
+html`<div style="margin-top: 1.5em;">
+  <h3>${selected.country}</h3>
+  <img src="${selected.file}" alt="${selected.country} flag" style="max-width: 450px; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
+</div>`
+```
